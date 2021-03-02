@@ -30,7 +30,7 @@ $jobs[] = [
 ];
 $jobs[] = [
     'name' => 'update-product-label-relations',
-    'command' => '$PHP_BIN vendor/bin/console product-label:relations:update -vvv',
+    'command' => '$PHP_BIN vendor/bin/console product-label:relations:update -vvv --no-touch',
     'schedule' => '* * * * *',
     'enable' => true,
     'stores' => $allStores,
@@ -143,6 +143,33 @@ $jobs[] = [
     'name' => 'apply-price-product-schedule',
     'command' => '$PHP_BIN vendor/bin/console price-product-schedule:apply',
     'schedule' => '0 6 * * *',
+    'enable' => true,
+    'stores' => $allStores,
+];
+
+/* ProductOfferValidity */
+$jobs[] = [
+    'name' => 'check-product-offer-validity',
+    'command' => '$PHP_BIN vendor/bin/console product-offer:check-validity',
+    'schedule' => '0 6 * * *',
+    'enable' => true,
+    'stores' => $allStores,
+];
+
+/* Oauth */
+$jobs[] = [
+    'name' => 'remove-expired-refresh-tokens',
+    'command' => '$PHP_BIN vendor/bin/console oauth:refresh-token:remove-expired',
+    'schedule' => '*/5 * * * *',
+    'enable' => true,
+    'stores' => $allStores,
+];
+
+/* Order invoice */
+$jobs[] = [
+    'name' => 'order-invoice-send',
+    'command' => '$PHP_BIN vendor/bin/console order:invoice:send',
+    'schedule' => '*/5 * * * *',
     'enable' => true,
     'stores' => $allStores,
 ];

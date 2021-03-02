@@ -9,9 +9,11 @@ namespace Pyz\Client\PriceProductStorage;
 
 use Spryker\Client\PriceProductMerchantRelationshipStorage\Plugin\PriceProductStorageExtension\PriceProductMerchantRelationshipStorageDimensionPlugin;
 use Spryker\Client\PriceProductOfferStorage\Plugin\PriceProductStorage\PriceProductOfferStorageDimensionPlugin;
-use Spryker\Client\PriceProductOfferStorage\Plugin\PriceProductStorage\PriceProductOfferStorageExpanderPlugin;
+use Spryker\Client\PriceProductOfferStorage\Plugin\PriceProductStorage\PriceProductOfferStorageFilterExpanderPlugin;
 use Spryker\Client\PriceProductStorage\PriceProductStorageDependencyProvider as SprykerPriceProductStorageDependencyProvider;
 use Spryker\Client\PriceProductVolume\Plugin\PriceProductStorageExtension\PriceProductVolumeExtractorPlugin;
+use Spryker\Client\ProductConfigurationStorage\Plugin\PriceProductStorage\ProductConfigurationPriceFilterExpanderPlugin;
+use Spryker\Client\ProductConfigurationStorage\Plugin\PriceProductStorage\ProductConfigurationStoragePriceDimensionPlugin;
 
 class PriceProductStorageDependencyProvider extends SprykerPriceProductStorageDependencyProvider
 {
@@ -23,6 +25,7 @@ class PriceProductStorageDependencyProvider extends SprykerPriceProductStorageDe
         return [
             new PriceProductMerchantRelationshipStorageDimensionPlugin(),
             new PriceProductOfferStorageDimensionPlugin(),
+            new ProductConfigurationStoragePriceDimensionPlugin(),
         ];
     }
 
@@ -42,7 +45,8 @@ class PriceProductStorageDependencyProvider extends SprykerPriceProductStorageDe
     protected function getPriceProductFilterExpanderPlugins(): array
     {
         return [
-            new PriceProductOfferStorageExpanderPlugin(),
+            new PriceProductOfferStorageFilterExpanderPlugin(),
+            new ProductConfigurationPriceFilterExpanderPlugin(),
         ];
     }
 }

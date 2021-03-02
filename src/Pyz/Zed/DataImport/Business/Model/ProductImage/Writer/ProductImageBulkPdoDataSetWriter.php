@@ -7,82 +7,20 @@
 
 namespace Pyz\Zed\DataImport\Business\Model\ProductImage\Writer;
 
-use Pyz\Zed\DataImport\Business\Model\DataFormatter\DataImportDataFormatterInterface;
 use Pyz\Zed\DataImport\Business\Model\ProductImage\ProductImageHydratorStep;
-use Pyz\Zed\DataImport\Business\Model\ProductImage\Writer\Sql\ProductImageSqlInterface;
-use Pyz\Zed\DataImport\Business\Model\PropelExecutorInterface;
-use Spryker\Zed\DataImport\Business\Model\DataSet\DataSetInterface;
+use Spryker\Zed\DataImport\Business\Model\ApplicableDatabaseEngineAwareInterface;
 use Spryker\Zed\DataImport\Business\Model\DataSet\DataSetWriterInterface;
 use Spryker\Zed\DataImport\Business\Model\Publisher\DataImporterPublisher;
-use Spryker\Zed\Product\Dependency\ProductEvents;
-use Spryker\Zed\ProductImage\Dependency\ProductImageEvents;
+use Spryker\Zed\Propel\PropelConfig;
 
-class ProductImageBulkPdoDataSetWriter implements DataSetWriterInterface
+class ProductImageBulkPdoDataSetWriter extends AbstractProductImageBulkDataSetWriter implements DataSetWriterInterface, ApplicableDatabaseEngineAwareInterface
 {
     /**
-     * @var \Pyz\Zed\DataImport\Business\Model\ProductImage\Writer\Sql\ProductImageSqlInterface
+     * @return bool
      */
-    protected $productImageSql;
-
-    /**
-     * @var \Pyz\Zed\DataImport\Business\Model\PropelExecutorInterface
-     */
-    protected $propelExecutor;
-
-    /**
-     * @var \Pyz\Zed\DataImport\Business\Model\DataFormatter\DataImportDataFormatterInterface
-     */
-    protected $dataFormatter;
-
-    /**
-     * @var array
-     */
-    protected static $productImageDataCollection = [];
-
-    /**
-     * @param \Pyz\Zed\DataImport\Business\Model\ProductImage\Writer\Sql\ProductImageSqlInterface $productImageSql
-     * @param \Pyz\Zed\DataImport\Business\Model\PropelExecutorInterface $propelExecutor
-     * @param \Pyz\Zed\DataImport\Business\Model\DataFormatter\DataImportDataFormatterInterface $dataFormatter
-     */
-    public function __construct(
-        ProductImageSqlInterface $productImageSql,
-        PropelExecutorInterface $propelExecutor,
-        DataImportDataFormatterInterface $dataFormatter
-    ) {
-        $this->productImageSql = $productImageSql;
-        $this->propelExecutor = $propelExecutor;
-        $this->dataFormatter = $dataFormatter;
-    }
-
-    /**
-     * @param \Spryker\Zed\DataImport\Business\Model\DataSet\DataSetInterface $dataSet
-     *
-     * @return void
-     */
-    public function write(DataSetInterface $dataSet): void
+    public function isApplicable(): bool
     {
-        $this->collectProductImageData($dataSet);
-
-        if (count(static::$productImageDataCollection) >= ProductImageHydratorStep::BULK_SIZE) {
-            $this->flush();
-        }
-    }
-
-    /**
-     * @return void
-     */
-    public function flush(): void
-    {
-        if (!static::$productImageDataCollection) {
-            return;
-        }
-
-        $this->persistProductImageSets();
-        $touchedProductImages = $this->persistProductImages();
-        $this->persistProductImageSetRelations();
-
-        $this->flushCollectedData();
-        $this->triggerEventsForUpdatedImageSets($touchedProductImages);
+        return $this->dataImportConfig->getCurrentDatabaseEngine() === PropelConfig::DB_ENGINE_PGSQL;
     }
 
     /**
@@ -119,9 +57,9 @@ class ProductImageBulkPdoDataSetWriter implements DataSetWriterInterface
      */
     protected function persistProductImages(): array
     {
-        $externalUrlLargeCollection = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_EXTERNAL_URL_LARGE);
-        $externalUrlSmallCollection = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_EXTERNAL_URL_SMALL);
-        $productImageKeys = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_PRODUCT_IMAGE_KEY);
+        $externalUrlLargeCollection = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, static::COLUMN_EXTERNAL_URL_LARGE);
+        $externalUrlSmallCollection = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, static::COLUMN_EXTERNAL_URL_SMALL);
+        $productImageKeys = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, static::COLUMN_PRODUCT_IMAGE_KEY);
 
         $parameters = [
             $this->dataFormatter->formatPostgresArrayString($externalUrlLargeCollection),
@@ -146,8 +84,8 @@ class ProductImageBulkPdoDataSetWriter implements DataSetWriterInterface
         $fkLocaleIds = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_IMAGE_SET_FK_LOCALE);
         $fkProductConcreteIds = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_FK_PRODUCT);
         $fkProductAbstractIds = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_FK_PRODUCT_ABSTRACT);
-        $sortOrder = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_SORT_ORDER);
-        $productImageKeys = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, ProductImageHydratorStep::KEY_PRODUCT_IMAGE_KEY);
+        $sortOrder = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, static::COLUMN_SORT_ORDER);
+        $productImageKeys = $this->dataFormatter->getCollectionDataByKey(static::$productImageDataCollection, static::COLUMN_PRODUCT_IMAGE_KEY);
 
         $parameters = [
             $this->dataFormatter->formatPostgresArrayString($productImageSetNames),
@@ -162,55 +100,6 @@ class ProductImageBulkPdoDataSetWriter implements DataSetWriterInterface
             $this->productImageSql->createProductImageSetRelationSQL(),
             $parameters
         );
-    }
-
-    /**
-     * @param array $touchedProductSetImages
-     *
-     * @return void
-     */
-    protected function addProductImageSetChangeEvent(array $touchedProductSetImages): void
-    {
-        foreach ($touchedProductSetImages as $productImageSet) {
-            if (!empty($productImageSet[ProductImageHydratorStep::KEY_IMAGE_SET_FK_PRODUCT_ABSTRACT])) {
-                DataImporterPublisher::addEvent(
-                    ProductImageEvents::PRODUCT_IMAGE_PRODUCT_ABSTRACT_PUBLISH,
-                    $productImageSet[ProductImageHydratorStep::KEY_IMAGE_SET_FK_PRODUCT_ABSTRACT]
-                );
-                DataImporterPublisher::addEvent(
-                    ProductEvents::PRODUCT_ABSTRACT_PUBLISH,
-                    $productImageSet[ProductImageHydratorStep::KEY_IMAGE_SET_FK_PRODUCT_ABSTRACT]
-                );
-            } elseif (!empty($productImageSet[ProductImageHydratorStep::KEY_IMAGE_SET_FK_PRODUCT])) {
-                DataImporterPublisher::addEvent(
-                    ProductImageEvents::PRODUCT_IMAGE_PRODUCT_CONCRETE_PUBLISH,
-                    $productImageSet[ProductImageHydratorStep::KEY_IMAGE_SET_FK_PRODUCT]
-                );
-            }
-        }
-    }
-
-    /**
-     * @param \Spryker\Zed\DataImport\Business\Model\DataSet\DataSetInterface $dataSet
-     *
-     * @return void
-     */
-    protected function collectProductImageData(DataSetInterface $dataSet): void
-    {
-        $productImageData = $dataSet[ProductImageHydratorStep::DATA_PRODUCT_IMAGE_SET_TRANSFER]->modifiedToArray();
-        $productImageData = array_merge($productImageData, $dataSet[ProductImageHydratorStep::DATA_PRODUCT_IMAGE_TRANSFER]->modifiedToArray());
-        $productImageData[ProductImageHydratorStep::KEY_SORT_ORDER] = $dataSet[ProductImageHydratorStep::KEY_SORT_ORDER];
-        $productImageData[ProductImageHydratorStep::KEY_PRODUCT_IMAGE_KEY] = $dataSet[ProductImageHydratorStep::KEY_PRODUCT_IMAGE_KEY];
-
-        static::$productImageDataCollection[] = $productImageData;
-    }
-
-    /**
-     * @return void
-     */
-    protected function flushCollectedData(): void
-    {
-        static::$productImageDataCollection = [];
     }
 
     /**

@@ -9,6 +9,7 @@ namespace Pyz\Yves\Console;
 
 use Spryker\Yves\Console\ConsoleDependencyProvider as SprykerConsoleDependencyProvider;
 use Spryker\Yves\Kernel\Container;
+use Spryker\Yves\Monitoring\Plugin\Console\MonitoringConsolePlugin;
 use Spryker\Yves\Router\Plugin\Application\RouterApplicationPlugin;
 use Spryker\Yves\Router\Plugin\Console\RouterCacheWarmUpConsole;
 use Spryker\Yves\Router\Plugin\Console\RouterDebugYvesConsole;
@@ -22,10 +23,12 @@ class ConsoleDependencyProvider extends SprykerConsoleDependencyProvider
      */
     protected function getConsoleCommands(Container $container): array
     {
-        return [
+        $consoleCommands = [
             new RouterDebugYvesConsole(),
             new RouterCacheWarmUpConsole(),
         ];
+
+        return $consoleCommands;
     }
 
     /**
@@ -37,6 +40,18 @@ class ConsoleDependencyProvider extends SprykerConsoleDependencyProvider
     {
         return [
             new RouterApplicationPlugin(),
+        ];
+    }
+
+    /**
+     * @param \Spryker\Yves\Kernel\Container $container
+     *
+     * @return \Spryker\Yves\Monitoring\Plugin\Console\MonitoringConsolePlugin[]
+     */
+    protected function getEventSubscriber(Container $container): array
+    {
+        return [
+            new MonitoringConsolePlugin(),
         ];
     }
 }

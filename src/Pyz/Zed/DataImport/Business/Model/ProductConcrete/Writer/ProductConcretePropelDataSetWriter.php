@@ -24,6 +24,13 @@ use Spryker\Zed\Product\Dependency\ProductEvents;
 class ProductConcretePropelDataSetWriter implements DataSetWriterInterface
 {
     /**
+     * @uses \Spryker\Shared\ProductBundleStorage\ProductBundleStorageConfig::PRODUCT_BUNDLE_PUBLISH
+     */
+    protected const PRODUCT_BUNDLE_PUBLISH = 'ProductBundle.product_bundle.publish.write';
+
+    protected const COLUMN_ABSTRACT_SKU = ProductConcreteHydratorStep::COLUMN_ABSTRACT_SKU;
+
+    /**
      * @var \Pyz\Zed\DataImport\Business\Model\Product\Repository\ProductRepositoryInterface
      */
     protected $productRepository;
@@ -47,7 +54,7 @@ class ProductConcretePropelDataSetWriter implements DataSetWriterInterface
 
         $this->productRepository->addProductConcrete(
             $productConcreteEntity,
-            $dataSet[ProductConcreteHydratorStep::KEY_ABSTRACT_SKU]
+            $dataSet[static::COLUMN_ABSTRACT_SKU]
         );
 
         $this->createOrUpdateProductConcreteLocalizedAttributesEntities($dataSet, $productConcreteEntity->getIdProduct());
@@ -71,7 +78,7 @@ class ProductConcretePropelDataSetWriter implements DataSetWriterInterface
     {
         $idAbstract = $this
             ->productRepository
-            ->getIdProductAbstractByAbstractSku($dataSet[ProductConcreteHydratorStep::KEY_ABSTRACT_SKU]);
+            ->getIdProductAbstractByAbstractSku($dataSet[static::COLUMN_ABSTRACT_SKU]);
 
         $productConcreteEntityTransfer = $this->getProductConcreteTransfer($dataSet);
         $productConcreteEntityTransfer->setFkProductAbstract($idAbstract);
@@ -114,6 +121,10 @@ class ProductConcretePropelDataSetWriter implements DataSetWriterInterface
                 $productBundleEntity->save();
             }
         }
+
+        if ($productBundleData) {
+            DataImporterPublisher::addEvent(static::PRODUCT_BUNDLE_PUBLISH, $idProduct);
+        }
     }
 
     /**
@@ -122,8 +133,10 @@ class ProductConcretePropelDataSetWriter implements DataSetWriterInterface
      *
      * @return void
      */
-    protected function createOrUpdateProductConcreteLocalizedAttributesEntities(DataSetInterface $dataSet, int $idProduct): void
-    {
+    protected function createOrUpdateProductConcreteLocalizedAttributesEntities(
+        DataSetInterface $dataSet,
+        int $idProduct
+    ): void {
         $productConcreteLocalizedTransfers = $this->getProductConcreteLocalizedTransfers($dataSet);
 
         foreach ($productConcreteLocalizedTransfers as $productConcreteLocalizedArray) {

@@ -21,15 +21,11 @@ use Codeception\Actor;
  * @method void am($role)
  * @method void lookForwardTo($achieveValue)
  * @method void comment($description)
- * @method \Codeception\Lib\Friend haveFriend($name, $actorClass = null)
+ * @method void pause()
  *
  * @SuppressWarnings(PHPMD)
  */
 class DataImportCommunicationTester extends Actor
 {
     use _generated\DataImportCommunicationTesterActions;
-
-   /**
-    * Define custom actions here
-    */
 }

@@ -13,13 +13,16 @@ use Generated\Shared\Transfer\QueueSendMessageTransfer;
 use Generated\Shared\Transfer\SynchronizationDataTransfer;
 use Orm\Zed\ProductPageSearch\Persistence\SpyProductAbstractPageSearch;
 use Propel\Runtime\Propel;
+use Pyz\Zed\ProductPageSearch\Business\Publisher\Sql\ProductPagePublisherCteInterface;
 use Spryker\Client\Queue\QueueClientInterface;
 use Spryker\Service\Synchronization\SynchronizationServiceInterface;
 use Spryker\Zed\ProductPageSearch\Business\Mapper\ProductPageSearchMapperInterface;
 use Spryker\Zed\ProductPageSearch\Business\Model\ProductPageSearchWriterInterface;
 use Spryker\Zed\ProductPageSearch\Business\Publisher\ProductAbstractPagePublisher as SprykerProductAbstractPagePublisher;
+use Spryker\Zed\ProductPageSearch\Business\Reader\AddToCartSkuReaderInterface;
 use Spryker\Zed\ProductPageSearch\Dependency\Facade\ProductPageSearchToStoreFacadeInterface;
 use Spryker\Zed\ProductPageSearch\Persistence\ProductPageSearchQueryContainerInterface;
+use Spryker\Zed\ProductPageSearch\ProductPageSearchConfig;
 
 /**
  * @example
@@ -42,6 +45,11 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
     protected $queueClient;
 
     /**
+     * @var \Pyz\Zed\ProductPageSearch\Business\Publisher\Sql\ProductPagePublisherCteInterface
+     */
+    protected $productAbstractPagePublisherCte;
+
+    /**
      * @var array
      */
     protected $synchronizedDataCollection = [];
@@ -57,9 +65,12 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
      * @param \Spryker\Zed\ProductPageSearchExtension\Dependency\Plugin\ProductPageDataLoaderPluginInterface[] $productPageDataLoaderPlugins
      * @param \Spryker\Zed\ProductPageSearch\Business\Mapper\ProductPageSearchMapperInterface $productPageSearchMapper
      * @param \Spryker\Zed\ProductPageSearch\Business\Model\ProductPageSearchWriterInterface $productPageSearchWriter
+     * @param \Spryker\Zed\ProductPageSearch\ProductPageSearchConfig $productPageSearchConfig
      * @param \Spryker\Zed\ProductPageSearch\Dependency\Facade\ProductPageSearchToStoreFacadeInterface $storeFacade
+     * @param \Spryker\Zed\ProductPageSearch\Business\Reader\AddToCartSkuReaderInterface $addToCartSkuReader
      * @param \Spryker\Service\Synchronization\SynchronizationServiceInterface $synchronizationService
      * @param \Spryker\Client\Queue\QueueClientInterface $queueClient
+     * @param \Pyz\Zed\ProductPageSearch\Business\Publisher\Sql\ProductPagePublisherCteInterface $productAbstractPagePublisherCte
      */
     public function __construct(
         ProductPageSearchQueryContainerInterface $queryContainer,
@@ -67,9 +78,12 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
         array $productPageDataLoaderPlugins,
         ProductPageSearchMapperInterface $productPageSearchMapper,
         ProductPageSearchWriterInterface $productPageSearchWriter,
+        ProductPageSearchConfig $productPageSearchConfig,
         ProductPageSearchToStoreFacadeInterface $storeFacade,
+        AddToCartSkuReaderInterface $addToCartSkuReader,
         SynchronizationServiceInterface $synchronizationService,
-        QueueClientInterface $queueClient
+        QueueClientInterface $queueClient,
+        ProductPagePublisherCteInterface $productAbstractPagePublisherCte
     ) {
         parent::__construct(
             $queryContainer,
@@ -77,11 +91,14 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
             $productPageDataLoaderPlugins,
             $productPageSearchMapper,
             $productPageSearchWriter,
-            $storeFacade
+            $productPageSearchConfig,
+            $storeFacade,
+            $addToCartSkuReader
         );
 
         $this->synchronizationService = $synchronizationService;
         $this->queueClient = $queueClient;
+        $this->productAbstractPagePublisherCte = $productAbstractPagePublisherCte;
     }
 
     /**
@@ -174,7 +191,7 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
      *
      * @return void
      */
-    protected function add(ProductPageSearchTransfer $productPageSearchTransfer, array $searchDocument)
+    protected function add(ProductPageSearchTransfer $productPageSearchTransfer, array $searchDocument): void
     {
         $synchronizedData = $this->buildSynchronizedData($productPageSearchTransfer, $searchDocument, 'product_abstract');
         $this->synchronizedDataCollection[] = $synchronizedData;
@@ -189,8 +206,11 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
      *
      * @return array
      */
-    public function buildSynchronizedData(ProductPageSearchTransfer $productPageSearchTransfer, array $data, string $resourceName): array
-    {
+    public function buildSynchronizedData(
+        ProductPageSearchTransfer $productPageSearchTransfer,
+        array $data,
+        string $resourceName
+    ): array {
         $key = $this->generateResourceKey($data, (string)$productPageSearchTransfer->getIdProductAbstract(), $resourceName);
         $encodedData = json_encode($data);
         $data['key'] = $key;
@@ -232,8 +252,11 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
      *
      * @return \Generated\Shared\Transfer\QueueSendMessageTransfer
      */
-    public function buildSynchronizedMessage(array $data, string $resourceName, array $params = []): QueueSendMessageTransfer
-    {
+    public function buildSynchronizedMessage(
+        array $data,
+        string $resourceName,
+        array $params = []
+    ): QueueSendMessageTransfer {
         $data['_timestamp'] = microtime(true);
         $payload = [
             'write' => [
@@ -267,148 +290,14 @@ class ProductAbstractPagePublisher extends SprykerProductAbstractPagePublisher
             return;
         }
 
-        $sql = $this->getSql();
+        $sql = $this->productAbstractPagePublisherCte->getSql();
 
         $con = Propel::getConnection();
+
         $stmt = $con->prepare($sql);
 
-        $foreignKeys = $this->formatPostgresArray(array_column($this->synchronizedDataCollection, 'fk_product_abstract'));
-        $stores = $this->formatPostgresArrayString(array_column($this->synchronizedDataCollection, 'store'));
-        $locales = $this->formatPostgresArrayString(array_column($this->synchronizedDataCollection, 'locale'));
-        $data = $this->formatPostgresArrayFromJson(array_column($this->synchronizedDataCollection, 'data'));
-        $structuredData = $this->formatPostgresArrayFromJson(array_column($this->synchronizedDataCollection, 'structured_data'));
-        $keys = $this->formatPostgresArrayString(array_column($this->synchronizedDataCollection, 'key'));
-
-        $params = [
-            $foreignKeys,
-            $stores,
-            $locales,
-            $data,
-            $structuredData,
-            $keys,
-        ];
+        $params = $this->productAbstractPagePublisherCte->buildParams($this->synchronizedDataCollection);
 
         $stmt->execute($params);
-    }
-
-    /**
-     * @param array $values
-     *
-     * @return string
-     */
-    public function formatPostgresArray(array $values): string
-    {
-        if (is_array($values) && empty($values)) {
-            return '{null}';
-        }
-
-        $values = array_map(function ($value) {
-            return ($value === null || $value === "") ? "NULL" : $value;
-        }, $values);
-
-        return sprintf(
-            '{%s}',
-            pg_escape_string(implode(',', $values))
-        );
-    }
-
-    /**
-     * @param array $values
-     *
-     * @return string
-     */
-    public function formatPostgresArrayString(array $values): string
-    {
-        return sprintf(
-            '{"%s"}',
-            pg_escape_string(implode('","', $values))
-        );
-    }
-
-    /**
-     * @param array $values
-     *
-     * @return string
-     */
-    public function formatPostgresArrayFromJson(array $values): string
-    {
-        return sprintf(
-            '[%s]',
-            pg_escape_string(implode(',', $values))
-        );
-    }
-
-    /**
-     * @return string
-     */
-    protected function getSql()
-    {
-        $sql = <<<SQL
-WITH records AS (
-    SELECT 
-      input.fk_product_abstract,
-      input.store,
-      input.locale,
-      input.data,
-      input.structured_data,
-      input.key,
-      id_product_abstract_page_search
-    FROM (
-           SELECT 
-             unnest(? :: INTEGER []) AS fk_product_abstract,
-             unnest(? :: VARCHAR []) AS store,
-             unnest(? :: VARCHAR []) AS locale,
-             json_array_elements(?) AS data,
-             json_array_elements(?) AS structured_data,
-             unnest(? :: VARCHAR []) AS key
-         ) input
-      LEFT JOIN spy_product_abstract_page_search ON spy_product_abstract_page_search.key = input.key
-    ),
-    updated AS (
-    UPDATE spy_product_abstract_page_search
-    SET 
-      fk_product_abstract = records.fk_product_abstract,
-      store = records.store,
-      locale = records.locale,
-      data = records.data,
-      structured_data = records.structured_data,
-      key = records.key,
-      updated_at = now()
-    FROM records
-    WHERE records.key = spy_product_abstract_page_search.key
-    RETURNING spy_product_abstract_page_search.id_product_abstract_page_search
-  ),
-    inserted AS (
-    INSERT INTO spy_product_abstract_page_search(
-      id_product_abstract_page_search, 
-      fk_product_abstract,
-      store,
-      locale,
-      data,
-      structured_data,
-      key,
-      created_at,
-      updated_at
-    ) (
-      SELECT
-        nextval('spy_product_abstract_page_search_pk_seq'), 
-        fk_product_abstract,
-        store,
-        locale,
-        data,
-        structured_data,
-        key,
-        now(),
-        now()
-      FROM records
-      WHERE id_product_abstract_page_search is null
-    ) RETURNING spy_product_abstract_page_search.id_product_abstract_page_search
-  )
-SELECT updated.id_product_abstract_page_search FROM updated
-UNION ALL
-SELECT inserted.id_product_abstract_page_search FROM inserted;
-SQL;
-
-        return $sql;
     }
 }

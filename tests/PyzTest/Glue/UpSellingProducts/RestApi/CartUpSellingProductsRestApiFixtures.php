@@ -7,10 +7,12 @@
 
 namespace PyzTest\Glue\UpSellingProducts\RestApi;
 
+use Generated\Shared\DataBuilder\StoreRelationBuilder;
 use Generated\Shared\Transfer\CustomerTransfer;
 use Generated\Shared\Transfer\ItemTransfer;
 use Generated\Shared\Transfer\ProductConcreteTransfer;
 use Generated\Shared\Transfer\QuoteTransfer;
+use Generated\Shared\Transfer\StoreRelationTransfer;
 use Generated\Shared\Transfer\StoreTransfer;
 use Generated\Shared\Transfer\TotalsTransfer;
 use PyzTest\Glue\UpSellingProducts\UpSellingProductsApiTester;
@@ -31,7 +33,7 @@ use SprykerTest\Shared\Testify\Fixtures\FixturesContainerInterface;
 class CartUpSellingProductsRestApiFixtures implements FixturesBuilderInterface, FixturesContainerInterface
 {
     protected const TEST_USERNAME = 'UserCartsUpSellingProductsRestApiFixtures';
-    protected const TEST_PASSWORD = 'password';
+    protected const TEST_PASSWORD = 'change123';
 
     /**
      * @var \Generated\Shared\Transfer\ProductConcreteTransfer
@@ -101,6 +103,8 @@ class CartUpSellingProductsRestApiFixtures implements FixturesBuilderInterface, 
             CustomerTransfer::NEW_PASSWORD => static::TEST_PASSWORD,
         ]);
 
+        $customerTransfer = $I->confirmCustomer($customerTransfer);
+
         $this->quoteTransfer = $this->createPersistentQuote($I, $customerTransfer, [$this->productConcreteTransfer]);
     }
 
@@ -121,9 +125,24 @@ class CartUpSellingProductsRestApiFixtures implements FixturesBuilderInterface, 
      */
     protected function createRelationBetweenProducts(UpSellingProductsApiTester $I): void
     {
+        $storeTransfer = $I->haveStore([
+            StoreTransfer::NAME => 'DE',
+        ]);
+        $storeRelationTransfer = (new StoreRelationBuilder())->seed([
+            StoreRelationTransfer::ID_STORES => [
+                $storeTransfer->getIdStore(),
+            ],
+            StoreRelationTransfer::STORES => [
+                $storeTransfer,
+            ],
+        ])->build();
+
         $I->haveProductRelation(
             $this->upSellingProductConcreteTransfer->getAbstractSku(),
-            $this->productConcreteTransfer->getFkProductAbstract()
+            $this->productConcreteTransfer->getFkProductAbstract(),
+            uniqid('test-', false),
+            'up-selling',
+            $storeRelationTransfer
         );
     }
 
@@ -134,8 +153,11 @@ class CartUpSellingProductsRestApiFixtures implements FixturesBuilderInterface, 
      *
      * @return \Generated\Shared\Transfer\QuoteTransfer
      */
-    protected function createPersistentQuote(UpSellingProductsApiTester $I, CustomerTransfer $customerTransfer, array $productConcreteTransfers): QuoteTransfer
-    {
+    protected function createPersistentQuote(
+        UpSellingProductsApiTester $I,
+        CustomerTransfer $customerTransfer,
+        array $productConcreteTransfers
+    ): QuoteTransfer {
         return $I->havePersistentQuote([
             QuoteTransfer::CUSTOMER => $customerTransfer,
             QuoteTransfer::TOTALS => (new TotalsTransfer())->setPriceToPay(random_int(1000, 10000)),

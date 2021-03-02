@@ -69,15 +69,18 @@ abstract class AbstractProductImageWriterTest extends AbstractWriterTest
      *
      * @return \Spryker\Zed\DataImport\Business\Model\DataSet\DataSet
      */
-    protected function createDataSet(array $product, SpyLocale $locale, ?SpyProductImageEntityTransfer $productImageEntityTransfer = null): DataSet
-    {
+    protected function createDataSet(
+        array $product,
+        SpyLocale $locale,
+        ?SpyProductImageEntityTransfer $productImageEntityTransfer = null
+    ): DataSet {
         $dataSet = new DataSet();
         $productImageKey = $productImageEntityTransfer ? $productImageEntityTransfer->getProductImageKey() : uniqid('', true);
-        $dataSet[ProductImageHydratorStep::KEY_ABSTRACT_SKU] = $product[SpyProductAbstractTableMap::COL_SKU];
-        $dataSet[ProductImageHydratorStep::KEY_CONCRETE_SKU] = '';
-        $dataSet[ProductImageHydratorStep::KEY_LOCALE] = $locale->getLocaleName();
-        $dataSet[ProductImageHydratorStep::KEY_SORT_ORDER] = 0;
-        $dataSet[ProductImageHydratorStep::KEY_PRODUCT_IMAGE_KEY] = $productImageKey;
+        $dataSet[ProductImageHydratorStep::COLUMN_ABSTRACT_SKU] = $product[SpyProductAbstractTableMap::COL_SKU];
+        $dataSet[ProductImageHydratorStep::COLUMN_CONCRETE_SKU] = '';
+        $dataSet[ProductImageHydratorStep::COLUMN_LOCALE] = $locale->getLocaleName();
+        $dataSet[ProductImageHydratorStep::COLUMN_SORT_ORDER] = 0;
+        $dataSet[ProductImageHydratorStep::COLUMN_PRODUCT_IMAGE_KEY] = $productImageKey;
         /**
          * @var \Generated\Shared\Transfer\SpyProductImageSetEntityTransfer
          */
@@ -87,7 +90,7 @@ abstract class AbstractProductImageWriterTest extends AbstractWriterTest
             ->setFkLocale($locale->getIdLocale())
             ->setFkProductAbstract($product[SpyProductAbstractTableMap::COL_ID_PRODUCT_ABSTRACT]);
 
-        $localeEntityTransfer = (new SpyLocaleEntityTransfer())->setLocaleName($dataSet[ProductImageHydratorStep::KEY_LOCALE]);
+        $localeEntityTransfer = (new SpyLocaleEntityTransfer())->setLocaleName($dataSet[ProductImageHydratorStep::COLUMN_LOCALE]);
         $spyProductImageSetEntityTransfer->setSpyLocale($localeEntityTransfer);
 
         if (!$productImageEntityTransfer) {
@@ -108,8 +111,11 @@ abstract class AbstractProductImageWriterTest extends AbstractWriterTest
      *
      * @return \Generated\Shared\Transfer\SpyProductImageEntityTransfer
      */
-    protected function createProductImageEntityTransfer(string $externalUrlLarge, string $externalUrlSmall, string $productImageKey): SpyProductImageEntityTransfer
-    {
+    protected function createProductImageEntityTransfer(
+        string $externalUrlLarge,
+        string $externalUrlSmall,
+        string $productImageKey
+    ): SpyProductImageEntityTransfer {
         return (new SpyProductImageEntityTransfer())
             ->setExternalUrlLarge($externalUrlLarge)
             ->setExternalUrlSmall($externalUrlSmall)
@@ -171,7 +177,7 @@ abstract class AbstractProductImageWriterTest extends AbstractWriterTest
             //Image Set
             /** @var \Generated\Shared\Transfer\SpyProductImageSetEntityTransfer $dataSetProductImageSet */
             $dataSetProductImageSet = $dataSets[$productImageSet[SpyProductAbstractTableMap::COL_SKU]][ProductImageHydratorStep::DATA_PRODUCT_IMAGE_SET_TRANSFER];
-            $this->assertEquals(
+            $this->assertSame(
                 $dataSetProductImageSet->getName(),
                 $productImageSet[SpyProductImageSetTableMap::COL_NAME]
             );

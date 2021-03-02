@@ -9,6 +9,8 @@ namespace Pyz\Client\Search;
 
 use Spryker\Client\Catalog\Plugin\Config\CatalogSearchConfigBuilder;
 use Spryker\Client\Kernel\Container;
+use Spryker\Client\MerchantProductOfferSearch\Plugin\MerchantNameSearchConfigExpanderPlugin;
+use Spryker\Client\MerchantProductSearch\Plugin\Search\MerchantProductMerchantNameSearchConfigExpanderPlugin;
 use Spryker\Client\ProductSearchConfigStorage\Plugin\Config\ProductSearchConfigExpanderPlugin;
 use Spryker\Client\Search\SearchDependencyProvider as SprykerSearchDependencyProvider;
 use Spryker\Client\SearchElasticsearch\Plugin\ElasticsearchSearchAdapterPlugin;
@@ -29,13 +31,15 @@ class SearchDependencyProvider extends SprykerSearchDependencyProvider
     /**
      * @param \Spryker\Client\Kernel\Container $container
      *
-     * @return \Spryker\Client\Search\Dependency\Plugin\SearchConfigExpanderPluginInterface[]
+     * @return \Spryker\Client\SearchExtension\Dependency\Plugin\SearchConfigExpanderPluginInterface[]
      */
-    protected function createSearchConfigExpanderPlugins(Container $container)
+    protected function createSearchConfigExpanderPlugins(Container $container): array
     {
         $searchConfigExpanderPlugins = parent::createSearchConfigExpanderPlugins($container);
 
         $searchConfigExpanderPlugins[] = new ProductSearchConfigExpanderPlugin();
+        $searchConfigExpanderPlugins[] = new MerchantNameSearchConfigExpanderPlugin();
+        $searchConfigExpanderPlugins[] = new MerchantProductMerchantNameSearchConfigExpanderPlugin();
 
         return $searchConfigExpanderPlugins;
     }

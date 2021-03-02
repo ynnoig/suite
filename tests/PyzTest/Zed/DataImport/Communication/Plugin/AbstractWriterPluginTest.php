@@ -10,10 +10,12 @@ namespace PyzTest\Zed\DataImport\Communication\Plugin;
 use Codeception\Configuration;
 use Codeception\Test\Unit;
 use Codeception\Util\Stub;
+use Generated\Shared\Transfer\DataImportConfigurationActionTransfer;
 use Generated\Shared\Transfer\DataImporterConfigurationTransfer;
 use Generated\Shared\Transfer\DataImporterReaderConfigurationTransfer;
 use Propel\Runtime\Propel;
-use Pyz\Zed\DataImport\Business\DataImportBusinessFactory;
+use Pyz\Zed\DataImport\Business\Model\PropelMariaDbVersionConstraintException;
+use Pyz\Zed\DataImport\Business\Model\PropelMariaDbVersionConstraintTrait;
 use Pyz\Zed\DataImport\DataImportConfig;
 use Spryker\Service\UtilEncoding\UtilEncodingService;
 use Spryker\Shared\Kernel\Store;
@@ -21,6 +23,7 @@ use Spryker\Zed\DataImport\Business\Model\DataSet\DataSetWriterCollection;
 use Spryker\Zed\DataImport\Dependency\Propel\DataImportToPropelConnectionBridge;
 use Spryker\Zed\DataImport\Dependency\Service\DataImportToUtilEncodingServiceBridge;
 use Spryker\Zed\PriceProduct\Business\PriceProductFacade;
+use Spryker\Zed\Propel\PropelConfig;
 
 /**
  * Auto-generated group annotations
@@ -35,41 +38,66 @@ use Spryker\Zed\PriceProduct\Business\PriceProductFacade;
  */
 abstract class AbstractWriterPluginTest extends Unit
 {
+    use PropelMariaDbVersionConstraintTrait;
+
+    /**
+     * @var \PyzTest\Zed\DataImport\DataImportCommunicationTester
+     */
+    protected $tester;
+
     /**
      * @return array
      */
     abstract public function getDataImportWriterPlugins(): array;
 
     /**
-     * @return string
+     * @return \Generated\Shared\Transfer\DataImportConfigurationActionTransfer
      */
-    abstract public function getDataImportCsvFile(): string;
+    abstract public function getDataImportConfigurationActionTransfer(): DataImportConfigurationActionTransfer;
 
     /**
      * @return \Pyz\Zed\DataImport\Business\DataImportBusinessFactory
      */
     protected function getDataImportBusinessFactoryStub()
     {
-        /**
-         * @var \Pyz\Zed\DataImport\Business\DataImportBusinessFactory
-         */
-        $dataImportBusinessFactory = Stub::make(DataImportBusinessFactory::class, [
-            'createProductAbstractDataImportWriters' => $this->createDataImportWriters(),
-            'createProductAbstractStoreDataImportWriters' => $this->createDataImportWriters(),
-            'createProductPriceDataImportWriters' => $this->createDataImportWriters(),
-            'createProductConcreteDataImportWriters' => $this->createDataImportWriters(),
-            'createProductImageDataWriters' => $this->createDataImportWriters(),
-            'createProductStockDataImportWriters' => $this->createDataImportWriters(),
-            'getConfig' => $this->getDataImportConfigStub(),
-            'getPropelConnection' => $this->getPropelConnection(),
-            'getStore' => $this->getStore(),
-            'getPriceProductFacade' => new PriceProductFacade(),
-            'getUtilEncodingService' => new DataImportToUtilEncodingServiceBridge(
-                new UtilEncodingService()
-            ),
-        ]);
+        $this->tester->mockFactoryMethod('createProductAbstractDataImportWriters', $this->createDataImportWriters());
+        $this->tester->mockFactoryMethod('createProductAbstractStoreDataImportWriters', $this->createDataImportWriters());
+        $this->tester->mockFactoryMethod('createProductPriceDataImportWriters', $this->createDataImportWriters());
+        $this->tester->mockFactoryMethod('createProductConcreteDataImportWriters', $this->createDataImportWriters());
+        $this->tester->mockFactoryMethod('createProductImageDataWriters', $this->createDataImportWriters());
+        $this->tester->mockFactoryMethod('createProductStockDataImportWriters', $this->createDataImportWriters());
+        $this->tester->mockFactoryMethod('getConfig', $this->getDataImportConfigStub());
+        $this->tester->mockFactoryMethod('getPropelConnection', $this->getPropelConnection());
+        $this->tester->mockFactoryMethod('getStore', $this->getStore());
+        $this->tester->mockFactoryMethod('getPriceProductFacade', new PriceProductFacade());
+        $this->tester->mockFactoryMethod('getUtilEncodingService', new DataImportToUtilEncodingServiceBridge(
+            new UtilEncodingService()
+        ));
 
-        return $dataImportBusinessFactory;
+        /** @var \Pyz\Zed\DataImport\Business\DataImportBusinessFactory $factory */
+        $factory = $this->tester->getFactory();
+
+        return $factory;
+    }
+
+    /**
+     * @return void
+     */
+    protected function markTestSkippedOnDatabaseConstraintsMismatch(): void
+    {
+        $dataImportBusinessFactory = $this->getDataImportBusinessFactoryStub();
+
+        if ($dataImportBusinessFactory->getConfig()->getCurrentDatabaseEngine() === PropelConfig::DB_ENGINE_PGSQL) {
+            return;
+        }
+
+        try {
+            $this->checkIsMariaDBSupportsBulkImport(
+                $dataImportBusinessFactory->createPropelExecutor()
+            );
+        } catch (PropelMariaDbVersionConstraintException $exception) {
+            $this->markTestSkipped('Importer does not support current database engine or it\'s version.');
+        }
     }
 
     /**
@@ -79,12 +107,7 @@ abstract class AbstractWriterPluginTest extends Unit
     {
         /** @var \Pyz\Zed\DataImport\DataImportConfig $dataImportConfig */
         $dataImportConfig = Stub::make(DataImportConfig::class, [
-            'getProductAbstractDataImporterConfiguration' => $this->getDataImporterConfiguration(),
-            'getProductStockDataImporterConfiguration' => $this->getDataImporterConfiguration(),
-            'getProductAbstractStoreDataImporterConfiguration' => $this->getDataImporterConfiguration(),
-            'getProductPriceDataImporterConfiguration' => $this->getDataImporterConfiguration(),
-            'getProductConcreteDataImporterConfiguration' => $this->getDataImporterConfiguration(),
-            'getProductImageDataImporterConfiguration' => $this->getDataImporterConfiguration(),
+            'buildImporterConfigurationByDataImportConfigAction' => $this->getDataImporterConfiguration(),
         ]);
 
         return $dataImportConfig;
@@ -103,11 +126,14 @@ abstract class AbstractWriterPluginTest extends Unit
      */
     public function getDataImporterConfiguration(): DataImporterConfigurationTransfer
     {
+        $dataImportConfigurationActionTransfer = $this->getDataImportConfigurationActionTransfer();
+
         $dataImporterReaderConfigurationTransfer = new DataImporterReaderConfigurationTransfer();
-        $dataImporterReaderConfigurationTransfer->setFileName(Configuration::dataDir() . $this->getDataImportCsvFile());
+        $dataImporterReaderConfigurationTransfer->setFileName(Configuration::dataDir() . $dataImportConfigurationActionTransfer->getSource());
 
         $dataImportConfigurationTransfer = new DataImporterConfigurationTransfer();
         $dataImportConfigurationTransfer->setReaderConfiguration($dataImporterReaderConfigurationTransfer);
+        $dataImportConfigurationTransfer->setImportType($dataImportConfigurationActionTransfer->getDataEntity());
 
         return $dataImportConfigurationTransfer;
     }

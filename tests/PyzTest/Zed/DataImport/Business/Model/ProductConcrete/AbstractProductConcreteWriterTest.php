@@ -52,7 +52,7 @@ abstract class AbstractProductConcreteWriterTest extends AbstractWriterTest
 
             /** @var \Generated\Shared\Transfer\SpyProductEntityTransfer $productTransfer */
             $productTransfer = (new SpyProductEntityBuilder())->build();
-            $dataSet[ProductConcreteHydratorStep::KEY_ABSTRACT_SKU] = $abstractSku;
+            $dataSet[ProductConcreteHydratorStep::COLUMN_ABSTRACT_SKU] = $abstractSku;
             $dataSet[ProductConcreteHydratorStep::DATA_PRODUCT_CONCRETE_TRANSFER] = $productTransfer;
             /**
              * @var \Generated\Shared\Transfer\SpyProductLocalizedAttributesEntityTransfer
@@ -109,11 +109,11 @@ abstract class AbstractProductConcreteWriterTest extends AbstractWriterTest
             //Product
             /** @var \Generated\Shared\Transfer\SpyProductEntityTransfer $dataSetProduct */
             $dataSetProduct = $dataSets[$productEntity->getSku()][ProductConcreteHydratorStep::DATA_PRODUCT_CONCRETE_TRANSFER];
-            $this->assertEquals(
+            $this->assertSame(
                 $dataSetProduct->getIsActive(),
                 $productEntity->getIsActive()
             );
-            $this->assertEquals(
+            $this->assertSame(
                 $dataSetProduct->getIsQuantitySplittable(),
                 $productEntity->getIsQuantitySplittable()
             );
@@ -131,15 +131,15 @@ abstract class AbstractProductConcreteWriterTest extends AbstractWriterTest
                     if ($localizedAttribute->getFkLocale() !== $localizedAttributeTransfer->getFkLocale()) {
                         continue;
                     }
-                    $this->assertEquals(
+                    $this->assertSame(
                         $localizedAttributeTransfer->getName(),
                         $localizedAttribute->getName()
                     );
-                    $this->assertEquals(
+                    $this->assertSame(
                         $localizedAttributeTransfer->getDescription(),
                         $localizedAttribute->getDescription()
                     );
-                    $this->assertEquals(
+                    $this->assertSame(
                         $localizedAttributeTransfer->getIsComplete(),
                         $localizedAttribute->getIsComplete()
                     );

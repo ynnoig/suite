@@ -7,8 +7,14 @@
 
 namespace Pyz\Glue\OrdersRestApi;
 
+use Spryker\Glue\ConfigurableBundlesRestApi\Plugin\OrdersRestApi\SalesConfiguredBundleRestOrderItemsAttributesMapperPlugin;
+use Spryker\Glue\OmsRestApi\Plugin\OrdersRestApi\OmsRestOrderItemsAttributesMapperPlugin;
 use Spryker\Glue\OrdersRestApi\OrdersRestApiDependencyProvider as SprykerOrdersRestApiDependencyProvider;
+use Spryker\Glue\ProductBundlesRestApi\Plugin\OrdersRestApi\BundleItemRestOrderDetailsAttributesMapperPlugin;
+use Spryker\Glue\ProductConfigurationsRestApi\Plugin\OrdersRestApi\ProductConfigurationRestOrderItemsAttributesMapperPlugin;
+use Spryker\Glue\ProductMeasurementUnitsRestApi\Plugin\OrdersRestApi\SalesUnitRestOrderItemsAttributesMapperPlugin;
 use Spryker\Glue\ProductOptionsRestApi\Plugin\OrdersRestApi\ProductOptionRestOrderItemsAttributesMapperPlugin;
+use Spryker\Glue\ShipmentsRestApi\Plugin\OrdersRestApi\ShipmentRestOrderDetailsAttributesMapperPlugin;
 
 class OrdersRestApiDependencyProvider extends SprykerOrdersRestApiDependencyProvider
 {
@@ -19,6 +25,21 @@ class OrdersRestApiDependencyProvider extends SprykerOrdersRestApiDependencyProv
     {
         return [
             new ProductOptionRestOrderItemsAttributesMapperPlugin(),
+            new SalesUnitRestOrderItemsAttributesMapperPlugin(),
+            new OmsRestOrderItemsAttributesMapperPlugin(),
+            new SalesConfiguredBundleRestOrderItemsAttributesMapperPlugin(),
+            new ProductConfigurationRestOrderItemsAttributesMapperPlugin(),
+        ];
+    }
+
+    /**
+     * @return \Spryker\Glue\OrdersRestApiExtension\Dependency\Plugin\RestOrderDetailsAttributesMapperPluginInterface[]
+     */
+    protected function getRestOrderDetailsAttributesMapperPlugins(): array
+    {
+        return [
+            new BundleItemRestOrderDetailsAttributesMapperPlugin(),
+            new ShipmentRestOrderDetailsAttributesMapperPlugin(),
         ];
     }
 }

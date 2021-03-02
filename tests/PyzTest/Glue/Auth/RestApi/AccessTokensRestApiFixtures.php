@@ -14,7 +14,7 @@ use SprykerTest\Shared\Testify\Fixtures\FixturesContainerInterface;
 
 class AccessTokensRestApiFixtures implements FixturesBuilderInterface, FixturesContainerInterface
 {
-    public const TEST_PASSWORD = 'Test password';
+    public const TEST_PASSWORD = 'change123';
 
     /**
      * @var \Generated\Shared\Transfer\CustomerTransfer
@@ -50,9 +50,11 @@ class AccessTokensRestApiFixtures implements FixturesBuilderInterface, FixturesC
      */
     protected function createCustomerTransfer(AuthRestApiTester $I): CustomerTransfer
     {
-        return $I->haveCustomer([
+        $customerTransfer = $I->haveCustomer([
             CustomerTransfer::PASSWORD => static::TEST_PASSWORD,
             CustomerTransfer::NEW_PASSWORD => static::TEST_PASSWORD,
         ]);
+
+        return $I->confirmCustomer($customerTransfer);
     }
 }

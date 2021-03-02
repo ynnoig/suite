@@ -5,11 +5,12 @@ declare const require: any;
 // add polyfills
 let coreJsFeaturesFolder = 'fn';
 /* tslint:disable: no-var-requires no-require-imports */
+import { info } from 'ShopUi/app/logger';
 try {
     require('core-js/features');
     coreJsFeaturesFolder = 'features';
 } catch (e) {
-    console.info('Please update the "core-js" version to >=3');
+    info('Please update the "core-js" version to >=3');
 }
 require(`core-js/${coreJsFeaturesFolder}/promise`);
 require(`core-js/${coreJsFeaturesFolder}/array`);
@@ -17,9 +18,12 @@ require(`core-js/${coreJsFeaturesFolder}/set`);
 require(`core-js/${coreJsFeaturesFolder}/map`);
 /* tslint:enable */
 
+import 'whatwg-fetch';
+import 'element-remove';
 import 'classlist-polyfill';
 import 'string.prototype.startswith';
 import 'date-input-polyfill';
+import 'intersection-observer';
 import elementClosestPolyfill from 'element-closest';
 elementClosestPolyfill(window);
 

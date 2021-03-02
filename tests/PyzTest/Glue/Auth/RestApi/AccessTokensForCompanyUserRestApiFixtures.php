@@ -17,7 +17,7 @@ use SprykerTest\Shared\Testify\Fixtures\FixturesContainerInterface;
 
 class AccessTokensForCompanyUserRestApiFixtures implements FixturesBuilderInterface, FixturesContainerInterface
 {
-    protected const TEST_PASSWORD = 'Test password';
+    protected const TEST_PASSWORD = 'change123';
 
     /**
      * @var \Generated\Shared\Transfer\CompanyUserTransfer
@@ -174,10 +174,12 @@ class AccessTokensForCompanyUserRestApiFixtures implements FixturesBuilderInterf
      */
     protected function createCustomerTransfer(AuthRestApiTester $I): CustomerTransfer
     {
-        return $I->haveCustomer([
+        $customerTransfer = $I->haveCustomer([
             CustomerTransfer::PASSWORD => static::TEST_PASSWORD,
             CustomerTransfer::NEW_PASSWORD => static::TEST_PASSWORD,
         ]);
+
+        return $I->confirmCustomer($customerTransfer);
     }
 
     /**
@@ -187,8 +189,11 @@ class AccessTokensForCompanyUserRestApiFixtures implements FixturesBuilderInterf
      *
      * @return \Generated\Shared\Transfer\CompanyUserTransfer
      */
-    protected function createCompanyUserTransfer(AuthRestApiTester $I, CustomerTransfer $customerTransfer, array $seed = []): CompanyUserTransfer
-    {
+    protected function createCompanyUserTransfer(
+        AuthRestApiTester $I,
+        CustomerTransfer $customerTransfer,
+        array $seed = []
+    ): CompanyUserTransfer {
         $companyTransfer = $I->haveActiveCompany([
             CompanyTransfer::STATUS => 'approved',
         ]);

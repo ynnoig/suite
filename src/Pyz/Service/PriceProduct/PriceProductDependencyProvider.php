@@ -8,9 +8,11 @@
 namespace Pyz\Service\PriceProduct;
 
 use Spryker\Service\PriceProduct\PriceProductDependencyProvider as SprykerPriceProductDependencyProvider;
-use Spryker\Service\PriceProductMerchantRelationship\Plugin\PriceProductExtension\MerchantRelationshipPriceProductFilterPlugin;
 use Spryker\Service\PriceProductOfferStorage\Plugin\PriceProduct\ProductOfferPriceProductFilterPlugin;
+use Spryker\Service\PriceProductOfferVolume\Plugin\PriceProductOffer\PriceProductOfferVolumeFilterPlugin;
 use Spryker\Service\PriceProductVolume\Plugin\PriceProductExtension\PriceProductVolumeFilterPlugin;
+use Spryker\Service\ProductConfigurationStorage\Plugin\PriceProduct\ProductConfigurationPriceProductFilterPlugin;
+use Spryker\Service\ProductConfigurationStorage\Plugin\PriceProduct\ProductConfigurationPriceProductVolumeFilterPlugin;
 
 class PriceProductDependencyProvider extends SprykerPriceProductDependencyProvider
 {
@@ -22,11 +24,15 @@ class PriceProductDependencyProvider extends SprykerPriceProductDependencyProvid
     protected function getPriceProductDecisionPlugins(): array
     {
         return array_merge([
-            new PriceProductVolumeFilterPlugin(),
-
-            // Should be placed after PriceProductVolumeFilterPlugin
-            new MerchantRelationshipPriceProductFilterPlugin(),
+            /**
+             * ProductOfferPriceProductFilterPlugin should be the first, otherwise other plugins might filter out the prices actually belonging to the offer.
+             */
             new ProductOfferPriceProductFilterPlugin(),
+
+            new ProductConfigurationPriceProductFilterPlugin(),
+            new ProductConfigurationPriceProductVolumeFilterPlugin(),
+            new PriceProductOfferVolumeFilterPlugin(),
+            new PriceProductVolumeFilterPlugin(),
         ], parent::getPriceProductDecisionPlugins());
     }
 }

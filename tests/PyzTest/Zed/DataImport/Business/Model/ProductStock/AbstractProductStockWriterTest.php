@@ -38,8 +38,7 @@ use Spryker\Zed\DataImport\Business\Model\DataSet\DataSet;
 abstract class AbstractProductStockWriterTest extends AbstractWriterTest
 {
     protected const WAREHOUSES_QTY = [
-        12345,
-        123456,
+        1234,
     ];
 
     /**
@@ -55,15 +54,15 @@ abstract class AbstractProductStockWriterTest extends AbstractWriterTest
         foreach ($productSkus as $index => $sku) {
             $dataSet = new DataSet();
 
-            $dataSet[ProductStockHydratorStep::KEY_IS_BUNDLE] = 0;
-            $dataSet[ProductStockHydratorStep::KEY_CONCRETE_SKU] = $sku;
-            $dataSet[ProductStockHydratorStep::KEY_IS_NEVER_OUT_OF_STOCK] = 0;
+            $dataSet[ProductStockHydratorStep::COLUMN_IS_BUNDLE] = 0;
+            $dataSet[ProductStockHydratorStep::COLUMN_CONCRETE_SKU] = $sku;
+            $dataSet[ProductStockHydratorStep::COLUMN_IS_NEVER_OUT_OF_STOCK] = 0;
             $dataSet[ProductStockHydratorStep::STOCK_ENTITY_TRANSFER] = (new SpyStockEntityTransfer())
                 ->setName($warehouses[$index] ?? $warehouses[0]);
 
             $dataSet[ProductStockHydratorStep::STOCK_PRODUCT_ENTITY_TRANSFER] = (new SpyStockProductEntityTransfer())
                 ->setQuantity(static::WAREHOUSES_QTY[$index])
-                ->setIsNeverOutOfStock($dataSet[ProductStockHydratorStep::KEY_IS_NEVER_OUT_OF_STOCK]);
+                ->setIsNeverOutOfStock($dataSet[ProductStockHydratorStep::COLUMN_IS_NEVER_OUT_OF_STOCK]);
 
             $result[$sku] = $dataSet;
         }
@@ -131,11 +130,12 @@ abstract class AbstractProductStockWriterTest extends AbstractWriterTest
         foreach ($fetchedResult['stockProducts'] as $stockProduct) {
             $dataSetStock = $dataSets[$stockProduct[SpyProductTableMap::COL_SKU]][ProductStockHydratorStep::STOCK_ENTITY_TRANSFER];
 
-            $this->assertEquals(
+            $this->assertSame(
                 $dataSetStock->getName(),
                 $stockProduct[SpyStockTableMap::COL_NAME]
             );
 
+            /** @var \Generated\Shared\Transfer\SpyProductOfferStockEntityTransfer $dataSetProductStock */
             $dataSetProductStock = $dataSets[$stockProduct[SpyProductTableMap::COL_SKU]][ProductStockHydratorStep::STOCK_PRODUCT_ENTITY_TRANSFER];
 
             $this->assertEquals(
@@ -146,7 +146,6 @@ abstract class AbstractProductStockWriterTest extends AbstractWriterTest
 
         foreach ($fetchedResult['availability'] as $availability) {
             $dataSetProductStock = $dataSets[$availability[SpyAvailabilityTableMap::COL_SKU]][ProductStockHydratorStep::STOCK_PRODUCT_ENTITY_TRANSFER];
-
             $this->assertEquals(
                 $dataSetProductStock->getQuantity(),
                 $availability[SpyAvailabilityTableMap::COL_QUANTITY]

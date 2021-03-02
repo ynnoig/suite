@@ -7,8 +7,8 @@
 
 namespace Pyz\Glue\GlueApplication\Bootstrap;
 
-use Spryker\Glue\GlueApplication\Bootstrap\AbstractGlueBootstrap;
+use Spryker\Glue\GlueApplication\Bootstrap\GlueBootstrap as SprykerGlueBootstrap;
 
-class GlueBootstrap extends AbstractGlueBootstrap
+class GlueBootstrap extends SprykerGlueBootstrap
 {
 }

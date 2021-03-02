@@ -18,6 +18,7 @@ use Orm\Zed\Glossary\Persistence\SpyGlossaryKeyQuery;
 use Orm\Zed\Glossary\Persistence\SpyGlossaryTranslationQuery;
 use Pyz\Zed\DataImport\Business\Model\CmsBlock\Category\Repository\CategoryRepositoryInterface;
 use Pyz\Zed\DataImport\Business\Model\Product\Repository\ProductRepositoryInterface;
+use Spryker\Shared\GlossaryStorage\GlossaryStorageConfig;
 use Spryker\Zed\CmsBlock\Business\Model\CmsBlockGlossaryKeyGenerator;
 use Spryker\Zed\CmsBlock\Dependency\CmsBlockEvents;
 use Spryker\Zed\CmsBlockCategoryConnector\Dependency\CmsBlockCategoryConnectorEvents;
@@ -26,7 +27,6 @@ use Spryker\Zed\DataImport\Business\Model\DataImportStep\DataImportStepInterface
 use Spryker\Zed\DataImport\Business\Model\DataImportStep\LocalizedAttributesExtractorStep;
 use Spryker\Zed\DataImport\Business\Model\DataImportStep\PublishAwareStep;
 use Spryker\Zed\DataImport\Business\Model\DataSet\DataSetInterface;
-use Spryker\Zed\Glossary\Dependency\GlossaryEvents;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -44,6 +44,7 @@ class CmsBlockWriterStep extends PublishAwareStep implements DataImportStepInter
     public const KEY_ACTIVE = 'active';
     public const KEY_PLACEHOLDER_TITLE = 'placeholder.title';
     public const KEY_PLACEHOLDER_DESCRIPTION = 'placeholder.description';
+    public const KEY_PLACEHOLDER_CONTENT = 'placeholder.content';
 
     /**
      * @var \Pyz\Zed\DataImport\Business\Model\CmsBlock\Category\Repository\CategoryRepositoryInterface
@@ -59,8 +60,10 @@ class CmsBlockWriterStep extends PublishAwareStep implements DataImportStepInter
      * @param \Pyz\Zed\DataImport\Business\Model\CmsBlock\Category\Repository\CategoryRepositoryInterface $categoryRepository
      * @param \Pyz\Zed\DataImport\Business\Model\Product\Repository\ProductRepositoryInterface $productRepository
      */
-    public function __construct(CategoryRepositoryInterface $categoryRepository, ProductRepositoryInterface $productRepository)
-    {
+    public function __construct(
+        CategoryRepositoryInterface $categoryRepository,
+        ProductRepositoryInterface $productRepository
+    ) {
         $this->categoryRepository = $categoryRepository;
         $this->productRepository = $productRepository;
     }
@@ -131,8 +134,10 @@ class CmsBlockWriterStep extends PublishAwareStep implements DataImportStepInter
      *
      * @return void
      */
-    protected function findOrCreateCmsBlockToCategoryRelation(DataSetInterface $dataSet, SpyCmsBlock $cmsBlockEntity): void
-    {
+    protected function findOrCreateCmsBlockToCategoryRelation(
+        DataSetInterface $dataSet,
+        SpyCmsBlock $cmsBlockEntity
+    ): void {
         if (empty($dataSet[static::KEY_CATEGORIES])) {
             return;
         }
@@ -158,8 +163,10 @@ class CmsBlockWriterStep extends PublishAwareStep implements DataImportStepInter
      *
      * @return void
      */
-    protected function findOrCreateCmsBlockToProductRelation(DataSetInterface $dataSet, SpyCmsBlock $cmsBlockEntity): void
-    {
+    protected function findOrCreateCmsBlockToProductRelation(
+        DataSetInterface $dataSet,
+        SpyCmsBlock $cmsBlockEntity
+    ): void {
         if (empty($dataSet[static::KEY_PRODUCTS])) {
             return;
         }
@@ -186,8 +193,10 @@ class CmsBlockWriterStep extends PublishAwareStep implements DataImportStepInter
      *
      * @return void
      */
-    protected function findOrCreateCmsBlockPlaceholderTranslation(DataSetInterface $dataSet, SpyCmsBlock $cmsBlockEntity)
-    {
+    protected function findOrCreateCmsBlockPlaceholderTranslation(
+        DataSetInterface $dataSet,
+        SpyCmsBlock $cmsBlockEntity
+    ) {
         foreach ($dataSet[LocalizedAttributesExtractorStep::KEY_LOCALIZED_ATTRIBUTES] as $idLocale => $placeholder) {
             foreach ($placeholder as $key => $value) {
                 $key = str_replace('placeholder.', '', $key);
@@ -227,7 +236,7 @@ class CmsBlockWriterStep extends PublishAwareStep implements DataImportStepInter
                     $pageKeyMappingEntity->save();
                 }
 
-                $this->addPublishEvents(GlossaryEvents::GLOSSARY_KEY_PUBLISH, $glossaryTranslationEntity->getFkGlossaryKey());
+                $this->addPublishEvents(GlossaryStorageConfig::GLOSSARY_KEY_PUBLISH_WRITE, $glossaryTranslationEntity->getFkGlossaryKey());
             }
         }
     }

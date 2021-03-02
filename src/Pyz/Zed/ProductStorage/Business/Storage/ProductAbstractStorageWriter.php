@@ -11,6 +11,7 @@ use Generated\Shared\Transfer\ProductAbstractStorageTransfer;
 use Generated\Shared\Transfer\QueueSendMessageTransfer;
 use Generated\Shared\Transfer\SynchronizationDataTransfer;
 use Propel\Runtime\Propel;
+use Pyz\Zed\ProductStorage\Business\Storage\Cte\ProductStorageCteStrategyInterface;
 use Spryker\Client\Queue\QueueClientInterface;
 use Spryker\Service\Synchronization\SynchronizationServiceInterface;
 use Spryker\Zed\ProductStorage\Business\Attribute\AttributeMapInterface;
@@ -50,13 +51,25 @@ class ProductAbstractStorageWriter extends SprykerProductAbstractStorageWriter
     protected $synchronizedMessageCollection = [];
 
     /**
+     * @var \Spryker\Zed\ProductStorageExtension\Dependency\Plugin\ProductAbstractStorageExpanderPluginInterface[]
+     */
+    protected $productAbstractStorageExpanderPlugins = [];
+
+    /**
+     * @var \Pyz\Zed\ProductStorage\Business\Storage\Cte\ProductStorageCteStrategyInterface
+     */
+    protected $productAbstractStorageCte;
+
+    /**
      * @param \Spryker\Zed\ProductStorage\Dependency\Facade\ProductStorageToProductInterface $productFacade
      * @param \Spryker\Zed\ProductStorage\Business\Attribute\AttributeMapInterface $attributeMap
      * @param \Spryker\Zed\ProductStorage\Persistence\ProductStorageQueryContainerInterface $queryContainer
      * @param \Spryker\Zed\ProductStorage\Dependency\Facade\ProductStorageToStoreFacadeInterface $storeFacade
      * @param bool $isSendingToQueue
+     * @param \Spryker\Zed\ProductStorageExtension\Dependency\Plugin\ProductAbstractStorageExpanderPluginInterface[] $productAbstractStorageExpanderPlugins
      * @param \Spryker\Service\Synchronization\SynchronizationServiceInterface $synchronizationService
      * @param \Spryker\Client\Queue\QueueClientInterface $queueClient
+     * @param \Pyz\Zed\ProductStorage\Business\Storage\Cte\ProductStorageCteStrategyInterface $productAbstractStorageCte
      */
     public function __construct(
         ProductStorageToProductInterface $productFacade,
@@ -64,13 +77,23 @@ class ProductAbstractStorageWriter extends SprykerProductAbstractStorageWriter
         ProductStorageQueryContainerInterface $queryContainer,
         ProductStorageToStoreFacadeInterface $storeFacade,
         $isSendingToQueue,
+        array $productAbstractStorageExpanderPlugins,
         SynchronizationServiceInterface $synchronizationService,
-        QueueClientInterface $queueClient
+        QueueClientInterface $queueClient,
+        ProductStorageCteStrategyInterface $productAbstractStorageCte
     ) {
-        parent::__construct($productFacade, $attributeMap, $queryContainer, $storeFacade, $isSendingToQueue);
+        parent::__construct(
+            $productFacade,
+            $attributeMap,
+            $queryContainer,
+            $storeFacade,
+            $isSendingToQueue,
+            $productAbstractStorageExpanderPlugins
+        );
 
         $this->synchronizationService = $synchronizationService;
         $this->queueClient = $queueClient;
+        $this->productAbstractStorageCte = $productAbstractStorageCte;
     }
 
     /**
@@ -129,7 +152,7 @@ class ProductAbstractStorageWriter extends SprykerProductAbstractStorageWriter
         $storeName,
         $localeName,
         array $attributeMapBulk = []
-    ) {
+    ): void {
         $productAbstractStorageTransfer = $this->mapToProductAbstractStorageTransfer(
             $productAbstractLocalizedEntity,
             new ProductAbstractStorageTransfer(),
@@ -151,7 +174,7 @@ class ProductAbstractStorageWriter extends SprykerProductAbstractStorageWriter
      *
      * @return void
      */
-    protected function add(array $productAbstractStorageData)
+    protected function add(array $productAbstractStorageData): void
     {
         $synchronizedData = $this->buildSynchronizedData($productAbstractStorageData, 'fk_product_abstract', 'product_abstract');
         $this->synchronizedDataCollection[] = $synchronizedData;
@@ -209,8 +232,11 @@ class ProductAbstractStorageWriter extends SprykerProductAbstractStorageWriter
      *
      * @return \Generated\Shared\Transfer\QueueSendMessageTransfer
      */
-    public function buildSynchronizedMessage(array $data, string $resourceName, array $params = []): QueueSendMessageTransfer
-    {
+    public function buildSynchronizedMessage(
+        array $data,
+        string $resourceName,
+        array $params = []
+    ): QueueSendMessageTransfer {
         $data['_timestamp'] = microtime(true);
         $payload = [
             'write' => [
@@ -244,141 +270,23 @@ class ProductAbstractStorageWriter extends SprykerProductAbstractStorageWriter
             return;
         }
 
-        $sql = $this->getSql();
-
-        $con = Propel::getConnection();
-        $stmt = $con->prepare($sql);
-
-        $foreignKeys = $this->formatPostgresArray(array_column($this->synchronizedDataCollection, 'fk_product_abstract'));
-        $stores = $this->formatPostgresArrayString(array_column($this->synchronizedDataCollection, 'store'));
-        $locales = $this->formatPostgresArrayString(array_column($this->synchronizedDataCollection, 'locale'));
-        $data = $this->formatPostgresArrayFromJson(array_column($this->synchronizedDataCollection, 'data'));
-        $keys = $this->formatPostgresArrayString(array_column($this->synchronizedDataCollection, 'key'));
-
-        $params = [
-            $foreignKeys,
-            $stores,
-            $locales,
-            $data,
-            $keys,
-        ];
-
-        $stmt->execute($params);
-    }
-
-    /**
-     * @param array $values
-     *
-     * @return string
-     */
-    public function formatPostgresArray(array $values): string
-    {
-        if (is_array($values) && empty($values)) {
-            return '{null}';
-        }
-
-        $values = array_map(function ($value) {
-            return ($value === null || $value === "") ? "NULL" : $value;
-        }, $values);
-
-        return sprintf(
-            '{%s}',
-            pg_escape_string(implode(',', $values))
-        );
-    }
-
-    /**
-     * @param array $values
-     *
-     * @return string
-     */
-    public function formatPostgresArrayString(array $values): string
-    {
-        return sprintf(
-            '{"%s"}',
-            pg_escape_string(implode('","', $values))
-        );
-    }
-
-    /**
-     * @param array $values
-     *
-     * @return string
-     */
-    public function formatPostgresArrayFromJson(array $values): string
-    {
-        return sprintf(
-            '[%s]',
-            pg_escape_string(implode(',', $values))
-        );
+        $stmt = Propel::getConnection()->prepare($this->getSql());
+        $stmt->execute($this->getParams());
     }
 
     /**
      * @return string
      */
-    protected function getSql()
+    protected function getSql(): string
     {
-        $sql = <<<SQL
-WITH records AS (
-    SELECT 
-      input.fk_product_abstract,
-      input.store,
-      input.locale,
-      input.data,
-      input.key,
-      id_product_abstract_storage
-    FROM (
-           SELECT 
-             unnest(? :: INTEGER []) AS fk_product_abstract,
-             unnest(? :: VARCHAR []) AS store,
-             unnest(? :: VARCHAR []) AS locale,
-             json_array_elements(?) AS data,
-             unnest(? :: VARCHAR []) AS key
-         ) input
-      LEFT JOIN spy_product_abstract_storage ON spy_product_abstract_storage.key = input.key
-    ),
-    updated AS (
-    UPDATE spy_product_abstract_storage
-    SET 
-      fk_product_abstract = records.fk_product_abstract,
-      store = records.store,
-      locale = records.locale,
-      data = records.data,
-      key = records.key,
-      updated_at = now()
-    FROM records
-    WHERE records.key = spy_product_abstract_storage.key
-    RETURNING spy_product_abstract_storage.id_product_abstract_storage
-  ),
-    inserted AS (
-    INSERT INTO spy_product_abstract_storage(
-      id_product_abstract_storage, 
-      fk_product_abstract,
-      store,
-      locale,
-      data,
-      key,
-      created_at,
-      updated_at
-    ) (
-      SELECT
-        nextval('spy_product_abstract_storage_pk_seq'), 
-        fk_product_abstract,
-        store,
-        locale,
-        data,
-        key,
-        now(),
-        now()
-      FROM records
-      WHERE id_product_abstract_storage is null
-    ) RETURNING spy_product_abstract_storage.id_product_abstract_storage
-  )
-SELECT updated.id_product_abstract_storage FROM updated
-UNION ALL
-SELECT inserted.id_product_abstract_storage FROM inserted;
-SQL;
+        return $this->productAbstractStorageCte->getSql();
+    }
 
-        return $sql;
+    /**
+     * @return string[]
+     */
+    protected function getParams(): array
+    {
+        return $this->productAbstractStorageCte->buildParams($this->synchronizedDataCollection);
     }
 }

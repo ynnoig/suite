@@ -26,7 +26,8 @@ use SprykerTest\Shared\Testify\Fixtures\FixturesContainerInterface;
  */
 class CustomerRestApiFixtures implements FixturesBuilderInterface, FixturesContainerInterface
 {
-    private const TEST_PASSWORD = 'test_password';
+    private const TEST_PASSWORD = 'change123';
+
     /**
      * @var \Generated\Shared\Transfer\CustomerTransfer
      */
@@ -54,6 +55,7 @@ class CustomerRestApiFixtures implements FixturesBuilderInterface, FixturesConta
     public function buildFixtures(CustomerApiTester $i): FixturesContainerInterface
     {
         $this->createCustomer($i);
+        $this->confirmCustomer($i);
 
         return $this;
     }
@@ -71,5 +73,15 @@ class CustomerRestApiFixtures implements FixturesBuilderInterface, FixturesConta
         ]);
 
         $this->customerTransfer = $customerTransfer;
+    }
+
+    /**
+     * @param \PyzTest\Glue\Customer\CustomerApiTester $i
+     *
+     * @return void
+     */
+    protected function confirmCustomer(CustomerApiTester $i): void
+    {
+        $this->customerTransfer = $i->confirmCustomer($this->customerTransfer);
     }
 }

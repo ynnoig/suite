@@ -29,7 +29,7 @@ use SprykerTest\Shared\Testify\Fixtures\FixturesContainerInterface;
 class WishlistsRestApiFixtures implements FixturesBuilderInterface, FixturesContainerInterface
 {
     protected const TEST_USERNAME = 'UserWishlistsRestApiFixtures';
-    protected const TEST_PASSWORD = 'password';
+    protected const TEST_PASSWORD = 'change123';
 
     /**
      * @var \Generated\Shared\Transfer\WishlistTransfer
@@ -96,6 +96,8 @@ class WishlistsRestApiFixtures implements FixturesBuilderInterface, FixturesCont
             CustomerTransfer::PASSWORD => static::TEST_PASSWORD,
             CustomerTransfer::NEW_PASSWORD => static::TEST_PASSWORD,
         ]);
+
+        $this->customerTransfer = $I->confirmCustomer($this->customerTransfer);
 
         $this->wishlistTransfer = $I->haveWishlist([
             WishlistTransfer::FK_CUSTOMER => $this->customerTransfer->getIdCustomer(),

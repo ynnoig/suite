@@ -7,7 +7,6 @@
 
 namespace Pyz\Zed\Checkout;
 
-use Pyz\Zed\MerchantSalesOrder\Communication\Plugin\MerchantOrderSaverPlugin;
 use Spryker\Zed\Availability\Communication\Plugin\ProductsAvailableCheckoutPreConditionPlugin;
 use Spryker\Zed\CartNote\Communication\Plugin\Checkout\CartNoteSaverPlugin;
 use Spryker\Zed\Checkout\CheckoutDependencyProvider as SprykerCheckoutDependencyProvider;
@@ -18,11 +17,15 @@ use Spryker\Zed\Discount\Communication\Plugin\Checkout\VoucherDiscountMaxUsageCh
 use Spryker\Zed\GiftCard\Communication\Plugin\GiftCardOrderItemSaverPlugin;
 use Spryker\Zed\GiftCardMailConnector\Communication\Plugin\Checkout\SendEmailToGiftCardUser;
 use Spryker\Zed\Kernel\Container;
+use Spryker\Zed\Merchant\Communication\Plugin\Checkout\MerchantCheckoutPreConditionPlugin;
+use Spryker\Zed\MerchantSwitcher\Communication\Plugin\Checkout\SingleMerchantCheckoutPreConditionPlugin;
+use Spryker\Zed\Payment\Communication\Plugin\Checkout\PaymentMethodValidityCheckoutPreConditionPlugin;
 use Spryker\Zed\Payment\Communication\Plugin\Checkout\PaymentOrderSaverPlugin;
 use Spryker\Zed\Payment\Communication\Plugin\Checkout\PaymentPostCheckPlugin;
 use Spryker\Zed\Payment\Communication\Plugin\Checkout\PaymentPreCheckPlugin;
 use Spryker\Zed\ProductBundle\Communication\Plugin\Checkout\ProductBundleAvailabilityCheckoutPreConditionPlugin;
 use Spryker\Zed\ProductBundle\Communication\Plugin\Checkout\ProductBundleOrderSaverPlugin;
+use Spryker\Zed\ProductConfiguration\Communication\Plugin\Checkout\ProductConfigurationCheckoutPreConditionPlugin;
 use Spryker\Zed\ProductDiscontinued\Communication\Plugin\Checkout\ProductDiscontinuedCheckoutPreConditionPlugin;
 use Spryker\Zed\ProductOption\Communication\Plugin\Checkout\ProductOptionOrderSaverPlugin;
 use Spryker\Zed\ProductPackagingUnit\Communication\Plugin\Checkout\AmountAvailabilityCheckoutPreConditionPlugin;
@@ -36,11 +39,12 @@ use Spryker\Zed\SalesOrderThreshold\Communication\Plugin\Checkout\SalesOrderThre
 use Spryker\Zed\SalesProductConnector\Communication\Plugin\Checkout\ItemMetadataSaverPlugin;
 use Spryker\Zed\Shipment\Communication\Plugin\Checkout\OrderShipmentSavePlugin;
 use Spryker\Zed\ShipmentCheckoutConnector\Communication\Plugin\Checkout\ShipmentCheckoutPreCheckPlugin;
+use SprykerEco\Zed\Payone\Communication\Plugin\Checkout\PayoneCheckoutPostSaveHookPlugin;
 
 class CheckoutDependencyProvider extends SprykerCheckoutDependencyProvider
 {
     /**
-     * @param \Spryker\Zed\Kernel\Container $container ’
+     * @param \Spryker\Zed\Kernel\Container $container
      *
      * @return \Spryker\Zed\CheckoutExtension\Dependency\Plugin\CheckoutPreConditionPluginInterface[]
      */
@@ -58,6 +62,10 @@ class CheckoutDependencyProvider extends SprykerCheckoutDependencyProvider
             new VoucherDiscountMaxUsageCheckoutPreConditionPlugin(),
             new QuoteRequestPreCheckPlugin(),
             new QuoteApprovalCheckoutPreConditionPlugin(),
+            new MerchantCheckoutPreConditionPlugin(),
+            new SingleMerchantCheckoutPreConditionPlugin(),
+            new PaymentMethodValidityCheckoutPreConditionPlugin(),
+            new ProductConfigurationCheckoutPreConditionPlugin(),
         ];
     }
 
@@ -81,7 +89,6 @@ class CheckoutDependencyProvider extends SprykerCheckoutDependencyProvider
             new ProductBundleOrderSaverPlugin(),
             new PaymentOrderSaverPlugin(),
             new SalesOrderThresholdExpenseSavePlugin(), #SalesOrderThresholdFeature
-            new MerchantOrderSaverPlugin(),
         ];
 
         return $plugins;
@@ -98,6 +105,7 @@ class CheckoutDependencyProvider extends SprykerCheckoutDependencyProvider
             new PaymentPostCheckPlugin(),
             new CloseQuoteRequestCheckoutPostSaveHookPlugin(),
             new SendEmailToGiftCardUser(), #GiftCardFeature
+            new PayoneCheckoutPostSaveHookPlugin(),
         ];
     }
 
